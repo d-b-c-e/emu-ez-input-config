@@ -15,10 +15,13 @@ Racing wheel setups involve multiple devices (wheel base, shifter, pedals) and m
 
 ## Supported Emulators
 
-- **PCSX2** (PlayStation 2) - `[Pad1]` section in PCSX2.ini + RacingWheel.ini profile
-- **Supermodel** (Sega Model 3) - `Input*` keys in Supermodel.ini
+- **PCSX2** (PlayStation 2) — `[Pad1]` DualShock2 in PCSX2.ini + RacingWheel.ini profile
+- **Supermodel** (Sega Model 3) — `Input*` keys in Supermodel.ini
+- **DuckStation** (PlayStation 1) — `[Pad1]` NeGcon (analog racing controller) in settings.ini
+- **PPSSPP** (PSP) — `[ControlMapping]` device-code pairs in controls.ini
+- **RPCS3** (PlayStation 3) — YAML MMJoystick config in Default.yml
 
-More coming: MAME, DuckStation, Dolphin, Model 2, RPCS3, PPSSPP.
+Planned: MAME, Dolphin, Model 2.
 
 ## Requirements
 
@@ -47,7 +50,7 @@ Set the LaunchBox root path, click **Start Detection**, follow the prompts, then
 ```
 src/EmuEzInputConfig/
   Detection/          # DirectInput device enumeration, noise filtering, input detection
-  ConfigWriters/      # Per-emulator config writers (PCSX2, Supermodel, ...)
+  ConfigWriters/      # Per-emulator config writers (PCSX2, Supermodel, DuckStation, PPSSPP, RPCS3)
   Models/             # Data models (InputConfig, InputMapping, DeviceInfo)
   Util/               # INI file editor, helpers
   Form1.cs            # Main WinForms UI with wizard and axis visualization

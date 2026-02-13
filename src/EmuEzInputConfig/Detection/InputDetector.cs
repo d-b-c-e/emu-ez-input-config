@@ -12,7 +12,7 @@ public class InputDetector
     private readonly DirectInputManager _manager;
 
     // Thresholds (DInput axes are 0-65535)
-    private const int AxisChangeThreshold = 16384;  // ~25% of full range
+    private const int AxisChangeThreshold = 6000;   // ~9% of full range (~18% of one direction from center)
     private const int AxisDirectionMid = 32767;     // Midpoint
     private const int NoiseMultiplier = 3;
     private const int NoiseMeasureMs = 400;

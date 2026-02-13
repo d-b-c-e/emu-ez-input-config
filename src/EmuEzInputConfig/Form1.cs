@@ -25,7 +25,7 @@ public partial class Form1 : Form
     private Label _lblPrompt = null!;
     private Label _lblStatus = null!;
     private Label _lblDevices = null!;
-    private Panel _axisPanel = null!;
+    private DoubleBufferedPanel _axisPanel = null!;
     private ListBox _lstResults = null!;
     private Button _btnStart = null!;
     private Button _btnSkip = null!;
@@ -132,8 +132,8 @@ public partial class Form1 : Form
         mainLayout.Controls.Add(promptPanel, 0, 2);
         mainLayout.SetColumnSpan(promptPanel, 2);
 
-        // Row 3 left: Axis visualization panel
-        _axisPanel = new Panel
+        // Row 3 left: Axis visualization panel (double-buffered to prevent flicker)
+        _axisPanel = new DoubleBufferedPanel
         {
             Dock = DockStyle.Fill,
             BackColor = Color.FromArgb(40, 40, 40),
@@ -419,7 +419,7 @@ public partial class Form1 : Form
 
             // Re-capture baselines for next step (user returns to neutral)
             _lblPrompt.Text = "Return controls to neutral...";
-            await Task.Delay(1500);
+            await Task.Delay(3000);
             _baselines = _detector!.CaptureBaselines(_devices!);
             _noiseThresholds = await Task.Run(() => _detector.MeasureNoise(_baselines, CancellationToken.None));
 
@@ -481,7 +481,14 @@ public partial class Form1 : Form
         string root = _txtLaunchboxRoot.Text;
         _lstResults.Items.Add("--- Writing emulator configs ---");
 
-        IConfigWriter[] writers = [new Pcsx2ConfigWriter(), new SupermodelConfigWriter()];
+        IConfigWriter[] writers =
+        [
+            new Pcsx2ConfigWriter(),
+            new SupermodelConfigWriter(),
+            new DuckStationConfigWriter(),
+            new PpssppConfigWriter(),
+            new Rpcs3ConfigWriter(),
+        ];
 
         foreach (var writer in writers)
         {
@@ -531,5 +538,20 @@ public partial class Form1 : Form
         _pollTimer?.Stop();
         _diManager?.Dispose();
         base.OnFormClosing(e);
+    }
+}
+
+/// <summary>
+/// Panel with double buffering enabled to prevent flicker during rapid repaints.
+/// </summary>
+internal class DoubleBufferedPanel : Panel
+{
+    public DoubleBufferedPanel()
+    {
+        SetStyle(
+            ControlStyles.AllPaintingInWmPaint |
+            ControlStyles.OptimizedDoubleBuffer |
+            ControlStyles.UserPaint,
+            true);
     }
 }
