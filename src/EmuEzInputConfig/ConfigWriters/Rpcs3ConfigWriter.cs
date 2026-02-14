@@ -60,7 +60,8 @@ public class Rpcs3ConfigWriter : IConfigWriter
         string? btnX = GetButtonBinding(m.GetValueOrDefault("btnX"));
         string? btnY = GetButtonBinding(m.GetValueOrDefault("btnY"));
 
-        // Face buttons take priority over axis fallback (same pattern as PCSX2)
+        // Face buttons and triggers are independent — no cross-fallback
+        // (matches real RPCS3 config: Cross=Button, R2=Axis, etc.)
         var bindings = new Dictionary<string, string>
         {
             ["Left Stick Left"] = steerNeg ?? "",
@@ -74,10 +75,10 @@ public class Rpcs3ConfigWriter : IConfigWriter
             ["Start"] = startBtn ?? "",
             ["Select"] = coinBtn ?? "",
             ["PS Button"] = "",
-            ["Square"] = btnX ?? brakeAxis ?? "",
-            ["Cross"] = btnA ?? gasAxis ?? "",
-            ["Circle"] = btnB ?? startBtn ?? "",
-            ["Triangle"] = btnY ?? gearUpBtn ?? "",
+            ["Square"] = btnX ?? "",
+            ["Cross"] = btnA ?? "",
+            ["Circle"] = btnB ?? "",
+            ["Triangle"] = btnY ?? "",
             ["Left"] = "",
             ["Down"] = "",
             ["Right"] = "",

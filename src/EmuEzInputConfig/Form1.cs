@@ -417,9 +417,18 @@ public partial class Form1 : Form
             _lblStatus.Text = $"Detected: {detail}";
             _lblStatus.ForeColor = Color.LightGreen;
 
-            // Re-capture baselines for next step (user returns to neutral)
-            _lblPrompt.Text = "Return controls to neutral...";
-            await Task.Delay(3000);
+            // Re-capture baselines for next step
+            // Axes (steering/gas/brake) need time to return to neutral; buttons/hats do not
+            bool needsNeutral = result.Mapping.Type == "axis";
+            if (needsNeutral)
+            {
+                _lblPrompt.Text = "Return controls to neutral...";
+                await Task.Delay(3000);
+            }
+            else
+            {
+                await Task.Delay(500); // brief pause so user sees the result
+            }
             _baselines = _detector!.CaptureBaselines(_devices!);
             _noiseThresholds = await Task.Run(() => _detector.MeasureNoise(_baselines, CancellationToken.None));
 
@@ -488,6 +497,7 @@ public partial class Form1 : Form
             new DuckStationConfigWriter(),
             new PpssppConfigWriter(),
             new Rpcs3ConfigWriter(),
+            new MameConfigWriter(),
         ];
 
         foreach (var writer in writers)

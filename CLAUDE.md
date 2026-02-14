@@ -25,6 +25,7 @@ src/EmuEzInputConfig/
     DuckStationConfigWriter.cs # DuckStation [Pad1] NeGcon writer
     PpssppConfigWriter.cs     # PPSSPP [ControlMapping] device-code writer
     Rpcs3ConfigWriter.cs      # RPCS3 YAML MMJoystick writer
+    MameConfigWriter.cs       # MAME XML ctrlr file + mame.ini writer
     DevReorderDeployer.cs     # DevReorder INI + DLL deployment
   Models/
     InputMapping.cs           # InputConfig, InputMapping, DeviceInfo data models
@@ -38,16 +39,16 @@ src/EmuEzInputConfig/
 ### DirectInput Axis Mapping
 SharpDX axis names map to emulator-specific indices:
 
-| SharpDX Property | DInput Index | PCSX2 Format | Supermodel Format | DuckStation | PPSSPP Axis ID | RPCS3 Name |
-|---|---|---|---|---|---|---|
-| X | 0 | Axis0 | XAXIS | Axis0 | 0 (4000/4001) | X |
-| Y | 1 | Axis1 | YAXIS | Axis1 | 1 (4002/4003) | Y |
-| Z | 2 | Axis2 | ZAXIS | Axis2 | 11 (4022/4023) | Z |
-| RotationX | 3 | Axis3 | RXAXIS | Axis3 | 12 (4024/4025) | RX |
-| RotationY | 4 | Axis4 | RYAXIS | Axis4 | 13 (4026/4027) | RY |
-| RotationZ | 5 | Axis5 | RZAXIS | Axis5 | 14 (4028/4029) | RZ |
-| Sliders[0] | 6 | Axis6 | — | Axis6 | — | — |
-| Sliders[1] | 7 | Axis7 | — | Axis7 | — | — |
+| SharpDX Property | DInput Index | PCSX2 Format | Supermodel Format | DuckStation | PPSSPP Axis ID | RPCS3 Name | MAME Token |
+|---|---|---|---|---|---|---|---|
+| X | 0 | Axis0 | XAXIS | Axis0 | 0 (4000/4001) | X | XAXIS |
+| Y | 1 | Axis1 | YAXIS | Axis1 | 1 (4002/4003) | Y | YAXIS |
+| Z | 2 | Axis2 | ZAXIS | Axis2 | 11 (4022/4023) | Z | ZAXIS |
+| RotationX | 3 | Axis3 | RXAXIS | Axis3 | 12 (4024/4025) | RX | RXAXIS |
+| RotationY | 4 | Axis4 | RYAXIS | Axis4 | 13 (4026/4027) | RY | RYAXIS |
+| RotationZ | 5 | Axis5 | RZAXIS | Axis5 | 14 (4028/4029) | RZ | RZAXIS |
+| Sliders[0] | 6 | Axis6 | — | Axis6 | — | — | SLIDER1 |
+| Sliders[1] | 7 | Axis7 | — | Axis7 | — | — | SLIDER2 |
 
 ### SharpDX Axis Range
 All axes return values in range **0–65535** (midpoint = 32767).
@@ -59,11 +60,12 @@ All axes return values in range **0–65535** (midpoint = 32767).
 - Supermodel: **1-indexed** (BUTTON1, BUTTON2, ...)
 - PPSSPP: **code-based** (188 + buttonIndex, so Button0 → code 188)
 - RPCS3: **1-indexed** (Button 1, Button 2, ...)
+- MAME: **1-indexed** (JOYCODE_1_BUTTON1, JOYCODE_1_BUTTON2, ...)
 
 ### Detection Engine
 - **Noise filtering**: Measures per-axis jitter during 400ms calibration, sets threshold = max(6000, jitter * 3)
 - **Debouncing**: Requires 3 consecutive polls above threshold before registering input
-- **Re-baseline**: 3s cooldown between wizard steps for user to return to neutral
+- **Re-baseline**: 3s cooldown after axis inputs (return to neutral), 500ms after buttons/hats
 - **onPoll callback**: Real-time axis values fed to UI for visualization
 
 ### Moza R12 Known Mappings
@@ -85,9 +87,10 @@ All axes return values in range **0–65535** (midpoint = 32767).
 - **DuckStation** — Writes `[Pad1]` in `settings.ini` (NeGcon controller for analog racing)
 - **PPSSPP** — Writes `[ControlMapping]` in `controls.ini` (device-code pairs)
 - **RPCS3** — Writes full YAML `Default.yml` (MMJoystick handler)
+- **MAME** — Writes XML ctrlr file `EmuEzRacing.cfg` + resets `default.cfg` + updates `mame.ini`
 
 ### Planned
-- MAME, Dolphin, Model 2
+- Dolphin, Model 2, RetroArch
 
 ## LaunchBox Integration
 
@@ -100,6 +103,9 @@ The app expects a LaunchBox root path to locate emulator config files:
 - DuckStation: `{root}\Emulators\DuckStation\settings.ini`
 - PPSSPP: `{root}\Emulators\ppsspp\memstick\PSP\SYSTEM\controls.ini`
 - RPCS3: `{root}\Emulators\rpcs3\config\input_configs\global\Default.yml`
+- MAME ctrlr: `{root}\Emulators\mame\ctrlr\EmuEzRacing.cfg`
+- MAME defaults: `{root}\Emulators\mame\cfg\default.cfg`
+- MAME ini: `{root}\Emulators\mame\mame.ini`
 - DevReorder source DLL: `{root}\Emulators\PCSX2\dinput8.dll`
 
 ## Building
@@ -114,19 +120,39 @@ dotnet run --project src/EmuEzInputConfig
 The app deploys DevReorder (portable DInput device ordering) to emulator directories:
 - Generates `devreorder.ini` with `[order]` (shifter, wheel) and `[hidden]` (gamepad)
 - Copies `dinput8.dll` from PCSX2 directory to other emulator directories
-- Targets: PCSX2, Supermodel, DuckStation, PPSSPP, RPCS3
+- Targets: PCSX2, Supermodel, DuckStation, PPSSPP, RPCS3, MAME
 - Ensures stable DInput device indices regardless of which controllers are connected
 
 ## Emulator-Specific Notes
 
 ### DuckStation (PS1)
-Uses **NeGcon** controller type — a PS1 racing controller with analog steering, gas (I), and brake (II). This is preferred over AnalogController/DualShock for racing games because it provides true analog gas/brake. Binding format: `DInput-N/+AxisM`, `DInput-N/ButtonM`, `DInput-N/Hat0 Dir`.
+Uses **NeGcon** controller type — a PS1 racing controller with analog steering, gas (I), and brake (II). This is preferred over AnalogController/DualShock for racing games because it provides true analog gas/brake. Binding format: `DInput-N/+AxisM`, `DInput-N/FullAxisM` (pedals), `DInput-N/ButtonM`, `DInput-N/Hat0 Dir`. Pedals use `FullAxis` (0→65535 range) instead of `+Axis` (half-axis). Writer also manages `[InputSources]` (DInput + Keyboard enabled) and `[Hotkeys]` (unified hotkey standard).
 
 ### PPSSPP (PSP)
 Uses **device-code pairs** in `[ControlMapping]`: `{deviceId}-{keyCode}`. Device ID = `10 + DInputIndex`. Button codes = `188 + buttonIndex`. Axis codes = `4000 + androidAxisId * 2` (positive) / `+1` (negative). Supports comma-separated multi-binding per key. PSP has no analog triggers; gas/brake map to Cross/Square buttons using axis codes.
 
 ### RPCS3 (PS3)
-Uses **YAML** with **MMJoystick** handler (DirectInput). Device = `"Joystick #{DInputIndex + 1}"` (1-indexed). Buttons are 1-indexed: `"Button N"`. Axes use format `"+Axis X+"` / `"-Axis X-"`. Gas/brake dual-map to both triggers (R2/L2) and face buttons (Cross/Square) for broad game compatibility.
+Uses **YAML** with **MMJoystick** handler (DirectInput). Device = `"Joystick #{DInputIndex + 1}"` (1-indexed). Buttons are 1-indexed: `"Button N"`. Axes use format `"+Axis X+"` / `"-Axis X-"`. Face buttons (Cross/Circle/Square/Triangle) and triggers (R2/L2) are independent — no cross-fallback between button and axis bindings.
+
+### MAME (Arcade)
+Uses **XML ctrlr files** for input configuration. Writer generates `EmuEzRacing.cfg` in `ctrlr/` with `<mapdevice>` for stable device assignment and `<port>` elements for racing inputs. MAME never auto-saves over ctrlr files. Axes use `JOYCODE_1_{AXIS}` format (e.g., `JOYCODE_1_XAXIS`). Buttons are 1-indexed: `JOYCODE_1_BUTTON{N+1}`. Racing port types: `P1_PADDLE` (steering), `P1_DIAL` (spinner alias), `P1_PEDAL` (gas), `P1_PEDAL2` (brake). Also resets `default.cfg` and updates `mame.ini` (flat key-value format) with joystick deadzone/saturation and ctrlr selection.
+
+## Unified Hotkey Standard
+
+All emulators in the LaunchBox Racing Redux build share the same hotkey scheme:
+
+| Key | Action | Support |
+|-----|--------|---------|
+| `Esc` | Exit game | All emulators (native or AHK) |
+| `Space` | Fast Forward | DuckStation, RetroArch, PCSX2, PPSSPP, Project64, Dolphin |
+| `R` | Rewind | DuckStation, RetroArch, PPSSPP |
+| `F3` | Reset | DuckStation, RetroArch, Project64, MAME, Model 2 |
+| `F5` | Save State | DuckStation, RetroArch, PCSX2, PPSSPP, Project64, Dolphin |
+| `F7` | Load State | DuckStation, RetroArch, PCSX2, PPSSPP, Project64, Dolphin |
+
+Additional DuckStation hotkeys: `Shift+F3` = Previous save slot, `F4` = Next save slot, `F10` = Screenshot, `F11` = Toggle fullscreen.
+
+Config writers should preserve or write these hotkey bindings where the emulator stores them natively (e.g., DuckStation `[Hotkeys]` section in settings.ini).
 
 ## Working Style
 

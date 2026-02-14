@@ -82,7 +82,7 @@ public class DuckStationConfigWriter : IConfigWriter
             ["L"] = gearDownBtn.HasValue ? $"{dev}/Button{gearDownBtn}" : "",
             ["R"] = gearUpBtn.HasValue ? $"{dev}/Button{gearUpBtn}" : "",
 
-            // Steering axis (full analog range)
+            // Steering axis — half-axes for left/right direction split
             ["SteeringRight"] = steerIdx.HasValue ? $"{dev}/+Axis{steerIdx}" : "",
             ["SteeringLeft"] = steerIdx.HasValue ? $"{dev}/-Axis{steerIdx}" : "",
 
@@ -90,9 +90,10 @@ public class DuckStationConfigWriter : IConfigWriter
             ["A"] = btnA.HasValue ? $"{dev}/Button{btnA}" : "",
             ["B"] = btnB.HasValue ? $"{dev}/Button{btnB}" : "",
 
-            // Analog gas (I) and brake (II) — NeGcon's analog trigger buttons
-            ["I"] = gasIdx.HasValue ? $"{dev}/+Axis{gasIdx}" : "",
-            ["II"] = brakeIdx.HasValue ? $"{dev}/+Axis{brakeIdx}" : "",
+            // Analog gas (I) and brake (II) — FullAxis because pedals use full 0→65535 range
+            // (SDL normalizes pedals to 0.0→1.0 positive half, but DInput reports raw 0→65535)
+            ["I"] = gasIdx.HasValue ? $"{dev}/FullAxis{gasIdx}" : "",
+            ["II"] = brakeIdx.HasValue ? $"{dev}/FullAxis{brakeIdx}" : "",
 
             // NeGcon tuning — no deadzone, full range, linear response
             ["SteeringDeadzone"] = "0.00",
@@ -114,7 +115,35 @@ public class DuckStationConfigWriter : IConfigWriter
         if (!File.Exists(iniPath)) return;
 
         var pad = GenerateBindings(config);
+        var inputSources = new Dictionary<string, string>
+        {
+            ["Keyboard"] = "true",
+            ["Mouse"] = "true",
+            ["SDL"] = "true",
+            ["SDLControllerEnhancedMode"] = "false",
+            ["DInput"] = "true",
+            ["XInput"] = "false",
+            ["RawInput"] = "false",
+        };
+
+        // Unified hotkey standard — matches LaunchBox Racing Redux scheme
+        var hotkeys = new Dictionary<string, string>
+        {
+            ["PowerOff"] = "Keyboard/Escape",
+            ["FastForward"] = "Keyboard/Space",
+            ["Rewind"] = "Keyboard/R",
+            ["Reset"] = "Keyboard/F3",
+            ["SaveSelectedSaveState"] = "Keyboard/F5",
+            ["LoadSelectedSaveState"] = "Keyboard/F7",
+            ["SelectPreviousSaveStateSlot"] = "Keyboard/Shift & Keyboard/F3",
+            ["SelectNextSaveStateSlot"] = "Keyboard/F4",
+            ["ToggleFullscreen"] = "Keyboard/F11",
+            ["Screenshot"] = "Keyboard/F10",
+        };
+
         IniEditor.BackupFile(iniPath);
         IniEditor.UpdateSection(iniPath, "Pad1", pad);
+        IniEditor.UpdateSection(iniPath, "InputSources", inputSources);
+        IniEditor.UpdateSection(iniPath, "Hotkeys", hotkeys);
     }
 }

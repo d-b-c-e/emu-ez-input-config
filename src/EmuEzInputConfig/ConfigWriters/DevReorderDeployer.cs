@@ -18,6 +18,7 @@ public class DevReorderDeployer
         (@"Emulators\DuckStation", "DuckStation"),
         (@"Emulators\ppsspp", "PPSSPP"),
         (@"Emulators\rpcs3", "RPCS3"),
+        (@"Emulators\mame", "MAME"),
     ];
 
     /// <summary>

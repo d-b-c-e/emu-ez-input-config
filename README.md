@@ -20,8 +20,9 @@ Racing wheel setups involve multiple devices (wheel base, shifter, pedals) and m
 - **DuckStation** (PlayStation 1) — `[Pad1]` NeGcon (analog racing controller) in settings.ini
 - **PPSSPP** (PSP) — `[ControlMapping]` device-code pairs in controls.ini
 - **RPCS3** (PlayStation 3) — YAML MMJoystick config in Default.yml
+- **MAME** (Arcade) — XML ctrlr file + mame.ini settings
 
-Planned: MAME, Dolphin, Model 2.
+Planned: Dolphin, Model 2, RetroArch.
 
 ## Requirements
 
@@ -50,7 +51,7 @@ Set the LaunchBox root path, click **Start Detection**, follow the prompts, then
 ```
 src/EmuEzInputConfig/
   Detection/          # DirectInput device enumeration, noise filtering, input detection
-  ConfigWriters/      # Per-emulator config writers (PCSX2, Supermodel, DuckStation, PPSSPP, RPCS3)
+  ConfigWriters/      # Per-emulator config writers (PCSX2, Supermodel, DuckStation, PPSSPP, RPCS3, MAME)
   Models/             # Data models (InputConfig, InputMapping, DeviceInfo)
   Util/               # INI file editor, helpers
   Form1.cs            # Main WinForms UI with wizard and axis visualization
