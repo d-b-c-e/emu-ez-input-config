@@ -37,6 +37,14 @@ Planned: Dolphin, Model 2, RetroArch.
 dotnet build
 ```
 
+## Testing
+
+```
+dotnet test
+```
+
+99 unit tests covering all config writers, DevReorder INI generation, INI file editing, and hotkey format translation. No hardware or emulator binaries required.
+
 ## Usage
 
 ```
@@ -56,6 +64,10 @@ src/EmuEzInputConfig/
   Models/             # Data models (InputConfig, InputMapping, DeviceInfo, HotkeyConfig)
   Util/               # INI file editor, hotkey format translators
   Form1.cs            # Main WinForms UI — tabbed (Input Detection + Hotkeys)
+tests/EmuEzInputConfig.Tests/
+  ConfigWriters/      # Per-emulator binding correctness tests
+  Util/               # IniEditor and HotkeyFormatter tests
+  TestHelpers/        # Fluent InputConfigBuilder for test data
 ```
 
 ## Related

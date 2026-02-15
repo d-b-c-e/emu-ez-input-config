@@ -34,6 +34,11 @@ src/EmuEzInputConfig/
     IniEditor.cs              # Section-aware INI file editor
     HotkeyFormatter.cs        # Keys→emulator format translators (Qt, PPSSPP Android keycodes)
   Form1.cs                    # Main WinForms UI — TabControl (Input Detection + Hotkeys tabs)
+tests/EmuEzInputConfig.Tests/
+  ConfigWriters/               # Per-emulator binding tests (PCSX2, Supermodel, DuckStation, PPSSPP, RPCS3, MAME, DevReorder)
+  Util/                        # IniEditor round-trip tests, HotkeyFormatter translation tests
+  TestHelpers/
+    InputConfigBuilder.cs      # Fluent builder with MozaR12() and MinimalAxesOnly() presets
 ```
 
 ## Key Technical Details
@@ -110,12 +115,15 @@ The app expects a LaunchBox root path to locate emulator config files:
 - MAME ini: `{root}\Emulators\mame\mame.ini`
 - DevReorder source DLL: `{root}\Emulators\PCSX2\dinput8.dll`
 
-## Building
+## Building & Testing
 
 ```
 dotnet build
+dotnet test
 dotnet run --project src/EmuEzInputConfig
 ```
+
+Tests use xUnit. The `InputConfigBuilder` in `TestHelpers/` provides fluent test data construction with `MozaR12()` (full config) and `MinimalAxesOnly()` (axes-only) presets. All tests are pure function tests — no hardware, emulators, or filesystem dependencies (except `IniEditorTests` which uses temp files).
 
 ## DevReorder
 

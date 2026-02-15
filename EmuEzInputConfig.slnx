@@ -2,4 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/EmuEzInputConfig/EmuEzInputConfig.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/EmuEzInputConfig.Tests/EmuEzInputConfig.Tests.csproj" />
+  </Folder>
 </Solution>
