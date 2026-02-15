@@ -2,6 +2,7 @@ namespace EmuEzInputConfig.ConfigWriters;
 
 using EmuEzInputConfig.Models;
 using EmuEzInputConfig.Util;
+using static EmuEzInputConfig.Util.HotkeyFormatter;
 
 /// <summary>
 /// Writes DuckStation [Pad1] section using NeGcon controller type (PS1 racing controller).
@@ -126,19 +127,20 @@ public class DuckStationConfigWriter : IConfigWriter
             ["RawInput"] = "false",
         };
 
-        // Unified hotkey standard — matches LaunchBox Racing Redux scheme
+        var h = config.Hotkeys;
         var hotkeys = new Dictionary<string, string>
         {
-            ["PowerOff"] = "Keyboard/Escape",
-            ["FastForward"] = "Keyboard/Space",
-            ["Rewind"] = "Keyboard/R",
-            ["Reset"] = "Keyboard/F3",
-            ["SaveSelectedSaveState"] = "Keyboard/F5",
-            ["LoadSelectedSaveState"] = "Keyboard/F7",
-            ["SelectPreviousSaveStateSlot"] = "Keyboard/Shift & Keyboard/F3",
-            ["SelectNextSaveStateSlot"] = "Keyboard/F4",
-            ["ToggleFullscreen"] = "Keyboard/F11",
-            ["Screenshot"] = "Keyboard/F10",
+            ["PowerOff"] = FormatQtKey(h.ExitKey, Keys.None),
+            ["FastForward"] = FormatQtKey(h.FastForwardKey, Keys.None),
+            ["Rewind"] = FormatQtKey(h.RewindKey, Keys.None),
+            ["Reset"] = FormatQtKey(h.ResetKey, Keys.None),
+            ["SaveSelectedSaveState"] = FormatQtKey(h.SaveStateKey, Keys.None),
+            ["LoadSelectedSaveState"] = FormatQtKey(h.LoadStateKey, Keys.None),
+            ["SelectPreviousSaveStateSlot"] = FormatQtKey(h.PreviousSaveSlotKey, h.PreviousSaveSlotModifier),
+            ["SelectNextSaveStateSlot"] = FormatQtKey(h.NextSaveSlotKey, Keys.None),
+            ["ToggleFullscreen"] = FormatQtKey(h.ToggleFullscreenKey, Keys.None),
+            ["Screenshot"] = FormatQtKey(h.ScreenshotKey, Keys.None),
+            ["TogglePause"] = FormatQtKey(h.TogglePauseKey, Keys.None),
         };
 
         IniEditor.BackupFile(iniPath);

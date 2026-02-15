@@ -54,6 +54,9 @@ public class InputConfig
 
     [JsonPropertyName("mappings")]
     public Dictionary<string, InputMapping> Mappings { get; set; } = new();
+
+    [JsonPropertyName("hotkeys")]
+    public HotkeyConfig Hotkeys { get; set; } = new();
 }
 
 /// <summary>

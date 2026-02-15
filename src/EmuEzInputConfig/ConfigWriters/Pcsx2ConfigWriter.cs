@@ -2,6 +2,7 @@ namespace EmuEzInputConfig.ConfigWriters;
 
 using EmuEzInputConfig.Models;
 using EmuEzInputConfig.Util;
+using static EmuEzInputConfig.Util.HotkeyFormatter;
 
 /// <summary>
 /// Writes PCSX2 [Pad1] and [InputSources] sections.
@@ -153,12 +154,26 @@ public class Pcsx2ConfigWriter : IConfigWriter
             Path.Combine(launchboxRoot, @"Emulators\PCSX2\RunWizard=0\inputprofiles\RacingWheel.ini"),
         ];
 
+        var h = config.Hotkeys;
+        var hotkeys = new Dictionary<string, string>
+        {
+            ["ToggleTurbo"] = FormatQtKey(h.FastForwardKey, Keys.None),
+            ["TogglePause"] = FormatQtKey(h.TogglePauseKey, Keys.None),
+            ["ToggleFullscreen"] = FormatQtKey(h.ToggleFullscreenKey, Keys.None),
+            ["SaveStateToSlot"] = FormatQtKey(h.SaveStateKey, Keys.None),
+            ["LoadStateFromSlot"] = FormatQtKey(h.LoadStateKey, Keys.None),
+            ["PreviousSaveStateSlot"] = FormatQtKey(h.PreviousSaveSlotKey, h.PreviousSaveSlotModifier),
+            ["NextSaveStateSlot"] = FormatQtKey(h.NextSaveSlotKey, Keys.None),
+            ["Screenshot"] = FormatQtKey(h.ScreenshotKey, Keys.None),
+        };
+
         foreach (var target in targets)
         {
             if (!File.Exists(target)) continue;
             IniEditor.BackupFile(target);
             IniEditor.UpdateSection(target, "Pad1", pad);
             IniEditor.UpdateSection(target, "InputSources", inputSources);
+            IniEditor.UpdateSection(target, "Hotkeys", hotkeys);
         }
     }
 }

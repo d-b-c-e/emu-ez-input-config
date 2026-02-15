@@ -2,6 +2,7 @@ namespace EmuEzInputConfig.ConfigWriters;
 
 using EmuEzInputConfig.Models;
 using EmuEzInputConfig.Util;
+using static EmuEzInputConfig.Util.HotkeyFormatter;
 
 /// <summary>
 /// Writes PPSSPP [ControlMapping] section using device-code pairs.
@@ -136,6 +137,25 @@ public class PpssppConfigWriter : IConfigWriter
         Add("Left", GetButtonCode(dpadLeft));
         Add("Right", GetHatCode(dpadRight, "right"));
         Add("Right", GetButtonCode(dpadRight));
+
+        // Add hotkey bindings (keyboard device = 1)
+        var h = config.Hotkeys;
+        void AddHotkey(string ppssppKey, Keys key)
+        {
+            string formatted = FormatPpssppKey(key);
+            if (!string.IsNullOrEmpty(formatted))
+            {
+                if (!bindings.ContainsKey(ppssppKey)) bindings[ppssppKey] = [];
+                if (!bindings[ppssppKey].Contains(formatted))
+                    bindings[ppssppKey].Add(formatted);
+            }
+        }
+
+        AddHotkey("Fast-forward", h.FastForwardKey);
+        AddHotkey("Pause", h.TogglePauseKey);
+        AddHotkey("Rewind", h.RewindKey);
+        AddHotkey("Save State", h.SaveStateKey);
+        AddHotkey("Load State", h.LoadStateKey);
 
         // Convert to comma-separated strings
         var result = new Dictionary<string, string>();

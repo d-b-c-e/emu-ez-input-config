@@ -29,9 +29,11 @@ src/EmuEzInputConfig/
     DevReorderDeployer.cs     # DevReorder INI + DLL deployment
   Models/
     InputMapping.cs           # InputConfig, InputMapping, DeviceInfo data models
+    HotkeyConfig.cs           # Configurable hotkey bindings (Keys enum, JSON-serializable)
   Util/
     IniEditor.cs              # Section-aware INI file editor
-  Form1.cs                    # Main WinForms UI with wizard and axis visualization
+    HotkeyFormatter.cs        # Keys→emulator format translators (Qt, PPSSPP Android keycodes)
+  Form1.cs                    # Main WinForms UI — TabControl (Input Detection + Hotkeys tabs)
 ```
 
 ## Key Technical Details
@@ -128,8 +130,11 @@ The app deploys DevReorder (portable DInput device ordering) to emulator directo
 ### DuckStation (PS1)
 Uses **NeGcon** controller type — a PS1 racing controller with analog steering, gas (I), and brake (II). This is preferred over AnalogController/DualShock for racing games because it provides true analog gas/brake. Binding format: `DInput-N/+AxisM`, `DInput-N/FullAxisM` (pedals), `DInput-N/ButtonM`, `DInput-N/Hat0 Dir`. Pedals use `FullAxis` (0→65535 range) instead of `+Axis` (half-axis). Writer also manages `[InputSources]` (DInput + Keyboard enabled) and `[Hotkeys]` (unified hotkey standard).
 
+### PCSX2 (PS2)
+Writer also manages `[Hotkeys]` section using the same Qt `Keyboard/{Key}` format as DuckStation. Maps to PCSX2-specific names: `ToggleTurbo` (fast forward), `SaveStateToSlot`, `LoadStateFromSlot`, `PreviousSaveStateSlot`, `NextSaveStateSlot`, `ToggleFullscreen`, `Screenshot`, `TogglePause`.
+
 ### PPSSPP (PSP)
-Uses **device-code pairs** in `[ControlMapping]`: `{deviceId}-{keyCode}`. Device ID = `10 + DInputIndex`. Button codes = `188 + buttonIndex`. Axis codes = `4000 + androidAxisId * 2` (positive) / `+1` (negative). Supports comma-separated multi-binding per key. PSP has no analog triggers; gas/brake map to Cross/Square buttons using axis codes.
+Uses **device-code pairs** in `[ControlMapping]`: `{deviceId}-{keyCode}`. Device ID = `10 + DInputIndex`. Button codes = `188 + buttonIndex`. Axis codes = `4000 + androidAxisId * 2` (positive) / `+1` (negative). Supports comma-separated multi-binding per key. PSP has no analog triggers; gas/brake map to Cross/Square buttons using axis codes. Hotkey entries (Fast-forward, Pause, Rewind, Save/Load State) are added to `[ControlMapping]` using keyboard device prefix `1-` and Android keycodes.
 
 ### RPCS3 (PS3)
 Uses **YAML** with **MMJoystick** handler (DirectInput). Device = `"Joystick #{DInputIndex + 1}"` (1-indexed). Buttons are 1-indexed: `"Button N"`. Axes use format `"+Axis X+"` / `"-Axis X-"`. Face buttons (Cross/Circle/Square/Triangle) and triggers (R2/L2) are independent — no cross-fallback between button and axis bindings.
@@ -137,22 +142,31 @@ Uses **YAML** with **MMJoystick** handler (DirectInput). Device = `"Joystick #{D
 ### MAME (Arcade)
 Uses **XML ctrlr files** for input configuration. Writer generates `EmuEzRacing.cfg` in `ctrlr/` with `<mapdevice>` for stable device assignment and `<port>` elements for racing inputs. MAME never auto-saves over ctrlr files. Axes use `JOYCODE_1_{AXIS}` format (e.g., `JOYCODE_1_XAXIS`). Buttons are 1-indexed: `JOYCODE_1_BUTTON{N+1}`. Racing port types: `P1_PADDLE` (steering), `P1_DIAL` (spinner alias), `P1_PEDAL` (gas), `P1_PEDAL2` (brake). Also resets `default.cfg` and updates `mame.ini` (flat key-value format) with joystick deadzone/saturation and ctrlr selection.
 
-## Unified Hotkey Standard
+## Configurable Hotkeys
 
-All emulators in the LaunchBox Racing Redux build share the same hotkey scheme:
+The Hotkeys tab lets users customize keyboard bindings before writing configs. Defaults match the unified LaunchBox Racing Redux hotkey standard. The `HotkeyConfig` model uses `System.Windows.Forms.Keys` enum and is serialized as part of `input-config.json`.
 
-| Key | Action | Support |
-|-----|--------|---------|
-| `Esc` | Exit game | All emulators (native or AHK) |
-| `Space` | Fast Forward | DuckStation, RetroArch, PCSX2, PPSSPP, Project64, Dolphin |
-| `R` | Rewind | DuckStation, RetroArch, PPSSPP |
-| `F3` | Reset | DuckStation, RetroArch, Project64, MAME, Model 2 |
-| `F5` | Save State | DuckStation, RetroArch, PCSX2, PPSSPP, Project64, Dolphin |
-| `F7` | Load State | DuckStation, RetroArch, PCSX2, PPSSPP, Project64, Dolphin |
+**Default hotkey standard:**
 
-Additional DuckStation hotkeys: `Shift+F3` = Previous save slot, `F4` = Next save slot, `F10` = Screenshot, `F11` = Toggle fullscreen.
+| Key | Action | Emulators |
+|-----|--------|-----------|
+| `Esc` | Exit game | DuckStation |
+| `Space` | Fast Forward | DuckStation, PCSX2, PPSSPP |
+| `R` | Rewind | DuckStation, PPSSPP |
+| `F3` | Reset | DuckStation |
+| `F5` | Save State | DuckStation, PCSX2, PPSSPP |
+| `F7` | Load State | DuckStation, PCSX2, PPSSPP |
+| `Shift+F3` | Previous save slot | DuckStation, PCSX2 |
+| `F4` | Next save slot | DuckStation, PCSX2 |
+| `F10` | Screenshot | DuckStation, PCSX2 |
+| `F11` | Toggle fullscreen | DuckStation, PCSX2 |
+| `P` | Toggle pause | DuckStation, PCSX2 |
 
-Config writers should preserve or write these hotkey bindings where the emulator stores them natively (e.g., DuckStation `[Hotkeys]` section in settings.ini).
+**Format translators** (`HotkeyFormatter`):
+- **DuckStation / PCSX2** (Qt-based): `Keyboard/{KeyName}`, modifiers joined with ` & ` (e.g., `Keyboard/Shift & Keyboard/F3`)
+- **PPSSPP** (Android keycodes): `1-{keycode}` where device 1 = keyboard (e.g., `1-62` = Space, `1-135` = F5)
+
+Writers that don't support native hotkeys (Supermodel, RPCS3, MAME) ignore `config.Hotkeys`.
 
 ## Working Style
 

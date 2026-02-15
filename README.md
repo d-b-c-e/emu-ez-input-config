@@ -10,8 +10,9 @@ Racing wheel setups involve multiple devices (wheel base, shifter, pedals) and m
 1. Detects all connected DirectInput devices with real names (not "Microsoft PC-joystick driver")
 2. Walks you through each input: steering, gas, brake, gear paddles, d-pad, face buttons
 3. Shows real-time axis visualization so you can see exactly what's happening
-4. Writes correct configs for every supported emulator in one click
-5. Deploys DevReorder (portable DInput device ordering) to keep device indices stable
+4. Configurable hotkeys tab — customize exit, fast forward, save/load state keys before writing
+5. Writes correct configs for every supported emulator in one click
+6. Deploys DevReorder (portable DInput device ordering) to keep device indices stable
 
 ## Supported Emulators
 
@@ -52,9 +53,9 @@ Set the LaunchBox root path, click **Start Detection**, follow the prompts, then
 src/EmuEzInputConfig/
   Detection/          # DirectInput device enumeration, noise filtering, input detection
   ConfigWriters/      # Per-emulator config writers (PCSX2, Supermodel, DuckStation, PPSSPP, RPCS3, MAME)
-  Models/             # Data models (InputConfig, InputMapping, DeviceInfo)
-  Util/               # INI file editor, helpers
-  Form1.cs            # Main WinForms UI with wizard and axis visualization
+  Models/             # Data models (InputConfig, InputMapping, DeviceInfo, HotkeyConfig)
+  Util/               # INI file editor, hotkey format translators
+  Form1.cs            # Main WinForms UI — tabbed (Input Detection + Hotkeys)
 ```
 
 ## Related

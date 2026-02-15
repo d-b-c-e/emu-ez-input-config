@@ -19,7 +19,7 @@ public partial class Form1 : Form
     private int _currentStep = -1;
     private bool _detecting = false;
 
-    // UI Controls
+    // UI Controls — Input Detection tab
     private Label _lblTitle = null!;
     private Label _lblStep = null!;
     private Label _lblPrompt = null!;
@@ -34,6 +34,9 @@ public partial class Form1 : Form
     private Button _btnBrowse = null!;
     private ProgressBar _progressBar = null!;
     private System.Windows.Forms.Timer _pollTimer = null!;
+
+    // UI Controls — Hotkeys tab
+    private readonly Dictionary<string, HotkeyButton> _hotkeyButtons = new();
 
     public Form1()
     {
@@ -50,6 +53,40 @@ public partial class Form1 : Form
         ForeColor = Color.White;
         Font = new Font("Segoe UI", 10f);
 
+        var tabControl = new TabControl
+        {
+            Dock = DockStyle.Fill,
+            Font = new Font("Segoe UI", 10f),
+        };
+
+        // Tab 1: Input Detection (existing wizard UI)
+        var tabDetection = new TabPage("Input Detection")
+        {
+            BackColor = Color.FromArgb(30, 30, 30),
+            ForeColor = Color.White,
+        };
+        SetupDetectionTab(tabDetection);
+        tabControl.TabPages.Add(tabDetection);
+
+        // Tab 2: Hotkeys
+        var tabHotkeys = new TabPage("Hotkeys")
+        {
+            BackColor = Color.FromArgb(30, 30, 30),
+            ForeColor = Color.White,
+            AutoScroll = true,
+        };
+        SetupHotkeysTab(tabHotkeys);
+        tabControl.TabPages.Add(tabHotkeys);
+
+        Controls.Add(tabControl);
+
+        // Poll timer for axis visualization
+        _pollTimer = new System.Windows.Forms.Timer { Interval = 33 }; // ~30fps
+        _pollTimer.Tick += PollTimer_Tick;
+    }
+
+    private void SetupDetectionTab(TabPage tab)
+    {
         var mainLayout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -195,11 +232,199 @@ public partial class Form1 : Form
         mainLayout.Controls.Add(btnPanel, 0, 5);
         mainLayout.SetColumnSpan(btnPanel, 2);
 
-        Controls.Add(mainLayout);
+        tab.Controls.Add(mainLayout);
+    }
 
-        // Poll timer for axis visualization
-        _pollTimer = new System.Windows.Forms.Timer { Interval = 33 }; // ~30fps
-        _pollTimer.Tick += PollTimer_Tick;
+    private void SetupHotkeysTab(TabPage tab)
+    {
+        var layout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 3,
+            AutoSize = true,
+            Padding = new Padding(20),
+        };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 180)); // Label
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 200)); // HotkeyButton
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 70));  // Reset
+
+        int row = 0;
+
+        // Header
+        var header = new Label
+        {
+            Text = "Hotkey Configuration",
+            Font = new Font("Segoe UI", 14f, FontStyle.Bold),
+            ForeColor = Color.FromArgb(0, 200, 100),
+            AutoSize = true,
+            Margin = new Padding(0, 0, 0, 8),
+        };
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.Controls.Add(header, 0, row);
+        layout.SetColumnSpan(header, 3);
+        row++;
+
+        // Standard section header
+        row = AddSectionHeader(layout, row, "Standard");
+
+        // Standard hotkeys
+        row = AddHotkeyRow(layout, row, "Exit Game", "exitKey",
+            _config.Hotkeys.ExitKey, Keys.None);
+        row = AddHotkeyRow(layout, row, "Fast Forward", "fastForwardKey",
+            _config.Hotkeys.FastForwardKey, Keys.None);
+        row = AddHotkeyRow(layout, row, "Rewind", "rewindKey",
+            _config.Hotkeys.RewindKey, Keys.None);
+        row = AddHotkeyRow(layout, row, "Reset", "resetKey",
+            _config.Hotkeys.ResetKey, Keys.None);
+        row = AddHotkeyRow(layout, row, "Save State", "saveStateKey",
+            _config.Hotkeys.SaveStateKey, Keys.None);
+        row = AddHotkeyRow(layout, row, "Load State", "loadStateKey",
+            _config.Hotkeys.LoadStateKey, Keys.None);
+
+        // Extended section header
+        row = AddSectionHeader(layout, row, "Extended");
+
+        // Extended hotkeys
+        row = AddHotkeyRow(layout, row, "Prev Save Slot", "previousSaveSlotKey",
+            _config.Hotkeys.PreviousSaveSlotKey, _config.Hotkeys.PreviousSaveSlotModifier);
+        row = AddHotkeyRow(layout, row, "Next Save Slot", "nextSaveSlotKey",
+            _config.Hotkeys.NextSaveSlotKey, Keys.None);
+        row = AddHotkeyRow(layout, row, "Toggle Fullscreen", "toggleFullscreenKey",
+            _config.Hotkeys.ToggleFullscreenKey, Keys.None);
+        row = AddHotkeyRow(layout, row, "Screenshot", "screenshotKey",
+            _config.Hotkeys.ScreenshotKey, Keys.None);
+        row = AddHotkeyRow(layout, row, "Toggle Pause", "togglePauseKey",
+            _config.Hotkeys.TogglePauseKey, Keys.None);
+
+        // Info label
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        var infoLabel = new Label
+        {
+            Text = "Applies to: DuckStation, PCSX2, PPSSPP",
+            ForeColor = Color.Gray,
+            Font = new Font("Segoe UI", 9f, FontStyle.Italic),
+            AutoSize = true,
+            Margin = new Padding(0, 16, 0, 8),
+        };
+        layout.Controls.Add(infoLabel, 0, row);
+        layout.SetColumnSpan(infoLabel, 3);
+        row++;
+
+        // Reset All button
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        var btnResetAll = new Button
+        {
+            Text = "Reset All to Defaults",
+            Width = 180,
+            Height = 32,
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Color.FromArgb(100, 50, 50),
+            ForeColor = Color.White,
+            Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+            Margin = new Padding(0, 4, 0, 0),
+        };
+        btnResetAll.Click += (s, e) => ResetAllHotkeys();
+        layout.Controls.Add(btnResetAll, 0, row);
+        layout.SetColumnSpan(btnResetAll, 3);
+
+        layout.RowCount = row + 1;
+        tab.Controls.Add(layout);
+    }
+
+    private int AddSectionHeader(TableLayoutPanel layout, int row, string text)
+    {
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        var label = new Label
+        {
+            Text = $"-- {text} --",
+            ForeColor = Color.FromArgb(150, 150, 150),
+            Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+            AutoSize = true,
+            Margin = new Padding(0, 12, 0, 4),
+        };
+        layout.Controls.Add(label, 0, row);
+        layout.SetColumnSpan(label, 3);
+        return row + 1;
+    }
+
+    private int AddHotkeyRow(TableLayoutPanel layout, int row, string label, string id,
+        Keys defaultKey, Keys defaultModifier)
+    {
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+        // Label
+        var lbl = new Label
+        {
+            Text = label + ":",
+            ForeColor = Color.LightGray,
+            Font = new Font("Segoe UI", 10f),
+            AutoSize = true,
+            Margin = new Padding(0, 6, 0, 0),
+            TextAlign = ContentAlignment.MiddleLeft,
+        };
+        layout.Controls.Add(lbl, 0, row);
+
+        // Hotkey capture button
+        var btn = new HotkeyButton
+        {
+            HotkeyKey = defaultKey,
+            HotkeyModifier = defaultModifier,
+            DefaultKey = defaultKey,
+            DefaultModifier = defaultModifier,
+            Width = 180,
+            Height = 30,
+            Margin = new Padding(0, 2, 0, 2),
+        };
+        _hotkeyButtons[id] = btn;
+        layout.Controls.Add(btn, 1, row);
+
+        // Reset button
+        var btnReset = new Button
+        {
+            Text = "Reset",
+            Width = 60,
+            Height = 28,
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Color.FromArgb(60, 60, 60),
+            ForeColor = Color.Gray,
+            Font = new Font("Segoe UI", 8f),
+            Margin = new Padding(4, 3, 0, 0),
+        };
+        btnReset.Click += (s, e) => btn.ResetToDefault();
+        layout.Controls.Add(btnReset, 2, row);
+
+        return row + 1;
+    }
+
+    private void ResetAllHotkeys()
+    {
+        foreach (var btn in _hotkeyButtons.Values)
+            btn.ResetToDefault();
+    }
+
+    /// <summary>
+    /// Read hotkey button states into the config model before writing.
+    /// </summary>
+    private void SyncHotkeysToConfig()
+    {
+        var h = _config.Hotkeys;
+
+        if (_hotkeyButtons.TryGetValue("exitKey", out var b)) h.ExitKey = b.HotkeyKey;
+        if (_hotkeyButtons.TryGetValue("fastForwardKey", out b)) h.FastForwardKey = b.HotkeyKey;
+        if (_hotkeyButtons.TryGetValue("rewindKey", out b)) h.RewindKey = b.HotkeyKey;
+        if (_hotkeyButtons.TryGetValue("resetKey", out b)) h.ResetKey = b.HotkeyKey;
+        if (_hotkeyButtons.TryGetValue("saveStateKey", out b)) h.SaveStateKey = b.HotkeyKey;
+        if (_hotkeyButtons.TryGetValue("loadStateKey", out b)) h.LoadStateKey = b.HotkeyKey;
+
+        if (_hotkeyButtons.TryGetValue("previousSaveSlotKey", out b))
+        {
+            h.PreviousSaveSlotKey = b.HotkeyKey;
+            h.PreviousSaveSlotModifier = b.HotkeyModifier;
+        }
+        if (_hotkeyButtons.TryGetValue("nextSaveSlotKey", out b)) h.NextSaveSlotKey = b.HotkeyKey;
+        if (_hotkeyButtons.TryGetValue("toggleFullscreenKey", out b)) h.ToggleFullscreenKey = b.HotkeyKey;
+        if (_hotkeyButtons.TryGetValue("screenshotKey", out b)) h.ScreenshotKey = b.HotkeyKey;
+        if (_hotkeyButtons.TryGetValue("togglePauseKey", out b)) h.TogglePauseKey = b.HotkeyKey;
     }
 
     private static Button CreateButton(string text, Color backColor)
@@ -487,6 +712,9 @@ public partial class Form1 : Form
 
     private void BtnWriteConfigs_Click(object? sender, EventArgs e)
     {
+        // Sync hotkey UI state into config before writing
+        SyncHotkeysToConfig();
+
         string root = _txtLaunchboxRoot.Text;
         _lstResults.Items.Add("--- Writing emulator configs ---");
 
@@ -529,7 +757,7 @@ public partial class Form1 : Form
             var results = DevReorderDeployer.Deploy(root, _config);
             foreach (var (target, success, msg) in results)
             {
-                _lstResults.Items.Add($"DevReorder → {target}: {(success ? "OK" : "FAIL")} - {msg}");
+                _lstResults.Items.Add($"DevReorder -> {target}: {(success ? "OK" : "FAIL")} - {msg}");
             }
         }
         catch (Exception ex)
@@ -548,6 +776,134 @@ public partial class Form1 : Form
         _pollTimer?.Stop();
         _diManager?.Dispose();
         base.OnFormClosing(e);
+    }
+}
+
+/// <summary>
+/// Button that captures keyboard hotkey input on click.
+/// Click to enter capture mode, then press a key combo to bind it.
+/// </summary>
+internal class HotkeyButton : Button
+{
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public Keys HotkeyKey { get; set; }
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public Keys HotkeyModifier { get; set; }
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public Keys DefaultKey { get; set; }
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public Keys DefaultModifier { get; set; }
+
+    private bool _capturing;
+
+    public HotkeyButton()
+    {
+        FlatStyle = FlatStyle.Flat;
+        BackColor = Color.FromArgb(50, 50, 50);
+        ForeColor = Color.White;
+        Font = new Font("Consolas", 10f, FontStyle.Bold);
+        TextAlign = ContentAlignment.MiddleCenter;
+        Cursor = Cursors.Hand;
+    }
+
+    protected override void OnCreateControl()
+    {
+        base.OnCreateControl();
+        UpdateDisplay();
+    }
+
+    protected override void OnClick(EventArgs e)
+    {
+        if (_capturing)
+        {
+            // Cancel capture on second click
+            _capturing = false;
+            UpdateDisplay();
+            return;
+        }
+
+        _capturing = true;
+        Text = "Press a key...";
+        BackColor = Color.FromArgb(80, 60, 20);
+        ForeColor = Color.FromArgb(255, 220, 100);
+    }
+
+    protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+    {
+        if (!_capturing) return base.ProcessCmdKey(ref msg, keyData);
+
+        // Extract modifier and base key
+        Keys modifiers = keyData & Keys.Modifiers;
+        Keys baseKey = keyData & Keys.KeyCode;
+
+        // Ignore standalone modifier presses — wait for the actual key
+        if (baseKey is Keys.ShiftKey or Keys.ControlKey or Keys.Menu
+            or Keys.LShiftKey or Keys.RShiftKey
+            or Keys.LControlKey or Keys.RControlKey
+            or Keys.LMenu or Keys.RMenu)
+        {
+            return true; // consume but don't finalize
+        }
+
+        // Normalize modifier to canonical form
+        Keys mod = Keys.None;
+        if ((modifiers & Keys.Shift) != 0) mod = Keys.ShiftKey;
+        else if ((modifiers & Keys.Control) != 0) mod = Keys.ControlKey;
+        else if ((modifiers & Keys.Alt) != 0) mod = Keys.Menu;
+
+        HotkeyKey = baseKey;
+        HotkeyModifier = mod;
+        _capturing = false;
+        UpdateDisplay();
+        return true; // consume the key
+    }
+
+    public void ResetToDefault()
+    {
+        HotkeyKey = DefaultKey;
+        HotkeyModifier = DefaultModifier;
+        _capturing = false;
+        UpdateDisplay();
+    }
+
+    private void UpdateDisplay()
+    {
+        Text = FormatHotkey(HotkeyKey, HotkeyModifier);
+        BackColor = Color.FromArgb(50, 50, 50);
+        ForeColor = Color.White;
+    }
+
+    public static string FormatHotkey(Keys key, Keys modifier)
+    {
+        string modText = modifier switch
+        {
+            Keys.ShiftKey => "Shift+",
+            Keys.ControlKey => "Ctrl+",
+            Keys.Menu => "Alt+",
+            _ => "",
+        };
+        string keyText = KeyToDisplayName(key);
+        return modText + keyText;
+    }
+
+    private static string KeyToDisplayName(Keys key)
+    {
+        return key switch
+        {
+            Keys.Escape => "Esc",
+            Keys.Space => "Space",
+            Keys.Back => "Backspace",
+            Keys.Delete => "Delete",
+            Keys.Return => "Enter",
+            Keys.Tab => "Tab",
+            Keys.Up => "Up",
+            Keys.Down => "Down",
+            Keys.Left => "Left",
+            Keys.Right => "Right",
+            >= Keys.F1 and <= Keys.F24 => key.ToString(),
+            >= Keys.D0 and <= Keys.D9 => key.ToString()[1..], // "D0" → "0"
+            _ => key.ToString(),
+        };
     }
 }
 
